@@ -1,4 +1,4 @@
-import { createSeedWorkspace, type WorkspaceSnapshot } from '@/data/seedData';
+import type { WorkspaceSnapshot } from '@/data/seedData';
 import { canSpend, summarizeBudget } from '@/lib/budget';
 import { formatUsd } from '@/lib/format';
 import { FINAL_STEP } from '@/lib/coordinator/steps';
