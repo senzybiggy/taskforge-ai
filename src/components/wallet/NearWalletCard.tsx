@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { useWallet } from '@/hooks/useWallet';
-import { NEAR_NETWORK_ID, isEmbeddedInCrossOriginFrame } from '@/services/nearWallet';
+import { NEAR_NETWORK_ID, isEmbeddedInCrossOriginFrame, openAppInStandaloneTab } from '@/services/nearWallet';
 
 export function NearWalletCard() {
   const { status, accountId, error, connect, disconnect } = useWallet();
@@ -44,14 +44,9 @@ export function NearWalletCard() {
           )}
           {embedded && !connected && (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-              <span>Meteor Wallet sign-in opens a secure popup that browsers block inside embedded previews. Open TaskForge in its own tab to use it.</span>
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<ExternalLink className="h-4 w-4" />}
-                onClick={() => window.open(window.location.href, '_blank', 'noopener,noreferrer')}
-              >
-                Open in new tab
+              <span>Meteor Wallet sign-in needs its own browser tab. Open TaskForge there to connect it.</span>
+              <Button variant="secondary" size="sm" icon={<ExternalLink className="h-4 w-4" />} onClick={openAppInStandaloneTab}>
+                Open Meteor Wallet
               </Button>
             </div>
           )}
