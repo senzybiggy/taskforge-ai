@@ -11,6 +11,27 @@ export const SPECIALIZATIONS = [
 
 export type Specialization = (typeof SPECIALIZATIONS)[number];
 
+export const TASK_SKILLS = [
+  'Market research',
+  'Competitor analysis',
+  'Technical writing',
+  'SEO',
+  'Data cleaning',
+  'Forecasting',
+  'Dashboards',
+  'React',
+  'TypeScript',
+  'Rust',
+  'UI design',
+  'Design systems',
+  'Security audit',
+  'Smart contract testing',
+  'Community monitoring',
+  'Process automation',
+] as const;
+
+export const MAX_TASK_SKILLS = 8;
+
 export interface Agent {
   id: string;
   name: string;
@@ -44,6 +65,7 @@ export interface Task {
   budgetUsd: number;
   deadline: string;
   specialization: Specialization;
+  skills: string[];
   preferredAgentId: string | null;
   selectedAgentId: string | null;
   completedSteps: number;
@@ -75,11 +97,19 @@ export interface WorkspaceSettings {
   budgetPoolUsd: number;
 }
 
+export interface WorkspaceSnapshot {
+  agents: Agent[];
+  tasks: Task[];
+  transactions: Transaction[];
+  settings: WorkspaceSettings;
+}
+
 export interface NewTaskInput {
   title: string;
   description: string;
   budgetUsd: number;
   deadline: string;
   specialization: Specialization;
+  skills: string[];
   preferredAgentId: string | null;
 }

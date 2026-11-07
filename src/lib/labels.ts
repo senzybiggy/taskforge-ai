@@ -19,6 +19,17 @@ export function isActiveTask(task: Task): boolean {
   return task.completedSteps < FINAL_STEP;
 }
 
+export function nextStepFor(task: Task): string {
+  if (task.completedSteps >= FINAL_STEP) return 'Delivered and paid. Nothing else to do.';
+  if (task.completedSteps === 7) return 'Review the verified work and approve the payment.';
+  if (task.completedSteps === 4) return 'Choose an agent from the bids on the task page.';
+  if (task.completedSteps === 3 && task.bids.length === 0) {
+    return 'No agent fits the budget. Raise the budget or adjust the required skills.';
+  }
+  if (task.completedSteps >= 5) return 'The agent is working on your brief. Progress updates appear on the task page.';
+  return 'The coordinator is analyzing your brief and gathering bids.';
+}
+
 export function transactionStatus(status: TransactionStatus): StatusDescriptor {
   switch (status) {
     case 'approved':

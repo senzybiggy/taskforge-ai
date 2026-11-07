@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, SelectInput, TextArea, TextInput } from '@/components/ui/Field';
 import { useAppData } from '@/hooks/useAppData';
 import { formatUsd } from '@/lib/format';
-import { SPECIALIZATIONS, type NewTaskInput, type Specialization, type Task } from '@/types/domain';
+import { SPECIALIZATIONS, MAX_TASK_SKILLS, TASK_SKILLS, type NewTaskInput, type Specialization, type Task } from '@/types/domain';
 
 export interface TaskDraft {
   specialization?: Specialization;
@@ -25,6 +25,7 @@ interface FormState {
   budget: string;
   deadline: string;
   specialization: Specialization;
+  skills: string[];
 }
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
@@ -61,6 +62,7 @@ function CreateTaskForm({ draft, onClose, onCreated }: Omit<CreateTaskModalProps
     budget: '',
     deadline: defaultDeadline(),
     specialization: draft?.specialization ?? 'Research',
+    skills: [],
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -88,7 +90,18 @@ function CreateTaskForm({ draft, onClose, onCreated }: Omit<CreateTaskModalProps
     if (!form.deadline || form.deadline < toIsoDate(new Date())) {
       next.deadline = 'Choose a deadline today or later.';
     }
+    if (form.skills.length === 0) next.skills = 'Choose at least one skill the agent needs.';
     return next;
+  };
+
+  const toggleSkill = (skill: string) => {
+    setForm((current) => {
+      const selected = current.skills.includes(skill);
+      if (!selected && current.skills.length >= MAX_TASK_SKILLS) return current;
+      const skills = selected ? current.skills.filter((item) => item !== skill) : [...current.skills, skill];
+      return { ...current, skills };
+    });
+    setErrors((current) => ({ ...current, skills: undefined }));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -103,6 +116,7 @@ function CreateTaskForm({ draft, onClose, onCreated }: Omit<CreateTaskModalProps
       budgetUsd: Math.round(parsedBudget * 100) / 100,
       deadline: form.deadline,
       specialization: form.specialization,
+      skills: form.skills,
       preferredAgentId: preferredAgent?.id ?? null,
     };
 
@@ -178,7 +192,7 @@ function CreateTaskForm({ draft, onClose, onCreated }: Omit<CreateTaskModalProps
         </Field>
       </div>
 
-      <Field label="Required specialization" htmlFor="task-specialization" hint="Only agents with this specialization will bid.">
+      <Field label="Category" htmlFor="task-specialization" hint="Only agents in this category will bid.">
         <SelectInput
           id="task-specialization"
           value={form.specialization}
@@ -190,6 +204,36 @@ function CreateTaskForm({ draft, onClose, onCreated }: Omit<CreateTaskModalProps
             </option>
           ))}
         </SelectInput>
+      </Field>
+
+      <Field
+        label="Required skills"
+        htmlFor="task-skills"
+        error={errors.skills}
+        hint={`Pick up to ${MAX_TASK_SKILLS}. ${form.skills.length} selected.`}
+      >
+        <div id="task-skills" className="flex flex-wrap gap-2">
+          {TASK_SKILLS.map((skill) => {
+            const selected = form.skills.includes(skill);
+            const atLimit = !selected && form.skills.length >= MAX_TASK_SKILLS;
+            return (
+              <button
+                key={skill}
+                type="button"
+                aria-pressed={selected}
+                disabled={atLimit}
+                onClick={() => toggleSkill(skill)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
+                  selected
+                    ? 'bg-blue-500/20 text-blue-100 ring-blue-400/50'
+                    : 'bg-white/[0.03] text-slate-300 ring-white/10 hover:bg-white/[0.07] hover:text-white'
+                }`}
+              >
+                {skill}
+              </button>
+            );
+          })}
+        </div>
       </Field>
 
       {submitError && (

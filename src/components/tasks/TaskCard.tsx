@@ -4,7 +4,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { AgentAvatar } from '@/components/agents/AgentAvatar';
 import { daysUntil, formatDate, formatUsd } from '@/lib/format';
 import { COORDINATOR_STEPS, FINAL_STEP } from '@/lib/coordinator/steps';
-import { taskStatus } from '@/lib/labels';
+import { nextStepFor, taskStatus } from '@/lib/labels';
 import type { Agent, Task } from '@/types/domain';
 
 interface TaskCardProps {
@@ -13,12 +13,15 @@ interface TaskCardProps {
   onOpen: () => void;
 }
 
+const VISIBLE_SKILLS = 3;
+
 export function TaskCard({ task, agent, onOpen }: TaskCardProps) {
   const status = taskStatus(task);
   const progress = (task.completedSteps / FINAL_STEP) * 100;
   const remaining = daysUntil(task.deadline);
   const stepLabel = COORDINATOR_STEPS[Math.min(task.completedSteps, FINAL_STEP - 1)]?.label ?? '';
   const finished = task.completedSteps >= FINAL_STEP;
+  const hiddenSkills = Math.max(0, task.skills.length - VISIBLE_SKILLS);
 
   return (
     <button
@@ -44,6 +47,20 @@ export function TaskCard({ task, agent, onOpen }: TaskCardProps) {
         </div>
         <ProgressBar value={progress} tone={finished ? 'emerald' : 'blue'} label={`${task.title} progress`} />
       </div>
+
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Next step</p>
+        <p className="mt-1 text-sm leading-relaxed text-slate-200">{nextStepFor(task)}</p>
+      </div>
+
+      {task.skills.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {task.skills.slice(0, VISIBLE_SKILLS).map((skill) => (
+            <Badge key={skill} tone="neutral">{skill}</Badge>
+          ))}
+          {hiddenSkills > 0 && <span className="text-xs text-slate-500">+{hiddenSkills} more</span>}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.06] pt-4">
         <div className="flex items-center gap-3 min-w-0">

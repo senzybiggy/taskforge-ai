@@ -1,166 +1,191 @@
-import type { WorkspaceSnapshot } from '@/data/seedData';
-import { canSpend, summarizeBudget } from '@/lib/budget';
+import { summarizeBudget } from '@/lib/budget';
 import { formatUsd } from '@/lib/format';
 import { FINAL_STEP } from '@/lib/coordinator/steps';
-import { readStoredWorkspace, writeStoredWorkspace } from '@/services/localWorkspaceStore';
+import { supabase } from '@/services/supabaseClient';
+import {
+  mapAgent,
+  mapSettings,
+  mapTask,
+  mapTransaction,
+  type AgentRow,
+  type SettingsRow,
+  type TaskRow,
+  type TransactionRow,
+} from '@/services/workspaceMappers';
 import type {
   NewTaskInput,
   Task,
   TaskProgressPatch,
   Transaction,
   WorkspaceSettings,
+  WorkspaceSnapshot,
 } from '@/types/domain';
 
-// Every operation here is the seam for a future backend or NEAR integration.
-// Callers only use these async functions, so the local store can be swapped out.
-
-const SIMULATED_LATENCY_MS = 180;
 const WORK_VERIFIED_STEP = 7;
+const LOAD_ERROR = 'Your workspace could not be loaded. Please try again.';
 
-let snapshot: WorkspaceSnapshot = readStoredWorkspace();
-
-function wait(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, SIMULATED_LATENCY_MS));
+interface SupabaseErrorLike {
+  code?: string;
+  message: string;
 }
 
-function commit(next: WorkspaceSnapshot): void {
-  writeStoredWorkspace(next);
-  snapshot = next;
+function userFacingError(error: SupabaseErrorLike, fallback: string): Error {
+  // Database budget and payment rules raise readable messages with this code.
+  return new Error(error.code === 'P0001' ? error.message : fallback);
 }
 
-function createId(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+function toTaskColumns(patch: TaskProgressPatch): Record<string, unknown> {
+  const columns: Record<string, unknown> = {};
+  if (patch.completedSteps !== undefined) columns.completed_steps = patch.completedSteps;
+  if (patch.selectedAgentId !== undefined) columns.selected_agent_id = patch.selectedAgentId;
+  if (patch.subtasks !== undefined) columns.subtasks = patch.subtasks;
+  if (patch.bids !== undefined) columns.bids = patch.bids;
+  if (patch.verificationScore !== undefined) columns.verification_score = patch.verificationScore;
+  return columns;
 }
 
-function findTask(taskId: string): Task {
-  const task = snapshot.tasks.find((item) => item.id === taskId);
-  if (!task) throw new Error('This task could not be found.');
-  return task;
+async function readTask(taskId: string): Promise<Task> {
+  const { data, error } = await supabase.from('tasks').select('*').eq('id', taskId).maybeSingle();
+  if (error) throw new Error('This task could not be loaded. Please try again.');
+  if (!data) throw new Error('This task could not be found.');
+  return mapTask(data as TaskRow);
 }
 
 export async function fetchWorkspace(): Promise<WorkspaceSnapshot> {
-  await wait();
-  return snapshot;
+  const [agents, tasks, transactions, settings] = await Promise.all([
+    supabase.from('agents').select('*').order('created_at', { ascending: true }),
+    supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+    supabase.from('transactions').select('*').order('created_at', { ascending: false }),
+    supabase.from('workspace_settings').select('workspace_name, budget_pool_usd').eq('id', 1).maybeSingle(),
+  ]);
+
+  if (agents.error || tasks.error || transactions.error || settings.error || !settings.data) {
+    throw new Error(LOAD_ERROR);
+  }
+
+  return {
+    agents: (agents.data as AgentRow[]).map(mapAgent),
+    tasks: (tasks.data as TaskRow[]).map(mapTask),
+    transactions: (transactions.data as TransactionRow[]).map(mapTransaction),
+    settings: mapSettings(settings.data as SettingsRow),
+  };
 }
 
 export async function createTask(input: NewTaskInput): Promise<Task> {
-  await wait();
-  const summary = summarizeBudget(snapshot.settings, snapshot.tasks, snapshot.transactions);
-  if (!canSpend(input.budgetUsd, summary)) {
-    throw new Error(`Only ${formatUsd(summary.availableUsd)} is available in your approved budget.`);
-  }
-  if (input.preferredAgentId && !snapshot.agents.some((agent) => agent.id === input.preferredAgentId)) {
-    throw new Error('The requested agent is no longer available.');
-  }
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert({
+      title: input.title,
+      description: input.description,
+      budget_usd: input.budgetUsd,
+      deadline: input.deadline,
+      specialization: input.specialization,
+      skills: input.skills,
+      preferred_agent_id: input.preferredAgentId,
+      completed_steps: 1,
+    })
+    .select()
+    .single();
 
-  const now = new Date().toISOString();
-  const task: Task = {
-    ...input,
-    id: createId('tsk'),
-    selectedAgentId: null,
-    completedSteps: 1,
-    subtasks: [],
-    bids: [],
-    verificationScore: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-  commit({ ...snapshot, tasks: [task, ...snapshot.tasks] });
-  return task;
+  if (error) throw userFacingError(error, 'The task could not be saved. Please try again.');
+  return mapTask(data as TaskRow);
 }
 
 export async function updateTaskProgress(taskId: string, patch: TaskProgressPatch): Promise<Task> {
-  await wait();
-  const current = findTask(taskId);
+  const current = await readTask(taskId);
   if (current.completedSteps >= FINAL_STEP) throw new Error('This task is already complete.');
   if (patch.completedSteps !== undefined && patch.completedSteps < current.completedSteps) {
     throw new Error('Task progress cannot move backwards.');
   }
 
-  const updated: Task = { ...current, ...patch, updatedAt: new Date().toISOString() };
-  commit({
-    ...snapshot,
-    tasks: snapshot.tasks.map((task) => (task.id === taskId ? updated : task)),
-  });
-  return updated;
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ ...toTaskColumns(patch), updated_at: new Date().toISOString() })
+    .eq('id', taskId)
+    .select()
+    .single();
+
+  if (error) throw userFacingError(error, 'The task could not be updated. Please try again.');
+  return mapTask(data as TaskRow);
 }
 
 export async function requestPayment(taskId: string): Promise<Transaction> {
-  await wait();
-  const task = findTask(taskId);
+  const task = await readTask(taskId);
   if (task.completedSteps !== WORK_VERIFIED_STEP) {
     throw new Error('A payment can be requested once the work is verified.');
   }
   const bid = task.bids.find((item) => item.agentId === task.selectedAgentId);
   if (!task.selectedAgentId || !bid) throw new Error('Select an agent before requesting payment.');
   if (bid.amountUsd > task.budgetUsd) throw new Error('The agreed amount is above the task budget.');
-  if (snapshot.transactions.some((tx) => tx.taskId === taskId && tx.status !== 'declined')) {
-    throw new Error('A payment request is already open for this task.');
-  }
 
-  const transaction: Transaction = {
-    id: createId('txn'),
-    taskId,
-    agentId: task.selectedAgentId,
-    amountUsd: bid.amountUsd,
-    status: 'pending_approval',
-    createdAt: new Date().toISOString(),
-    decidedAt: null,
-  };
-  commit({ ...snapshot, transactions: [transaction, ...snapshot.transactions] });
-  return transaction;
+  const { data: openRows, error: openError } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('task_id', taskId)
+    .neq('status', 'declined');
+  if (openError) throw new Error('The payment request could not be created. Please try again.');
+  if ((openRows ?? []).length > 0) throw new Error('A payment request is already open for this task.');
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({ task_id: taskId, agent_id: task.selectedAgentId, amount_usd: bid.amountUsd })
+    .select()
+    .single();
+
+  if (error) throw userFacingError(error, 'The payment request could not be created. Please try again.');
+  return mapTransaction(data as TransactionRow);
 }
 
 export async function decidePayment(
   transactionId: string,
   decision: 'approve' | 'decline',
 ): Promise<{ transaction: Transaction; task: Task }> {
-  await wait();
-  const current = snapshot.transactions.find((item) => item.id === transactionId);
-  if (!current) throw new Error('This payment could not be found.');
-  if (current.status !== 'pending_approval') throw new Error('This payment has already been decided.');
-
-  const task = findTask(current.taskId);
-  const decidedAt = new Date().toISOString();
-
-  if (decision === 'decline') {
-    const transaction: Transaction = { ...current, status: 'declined', decidedAt };
-    commit({
-      ...snapshot,
-      transactions: snapshot.transactions.map((tx) => (tx.id === transactionId ? transaction : tx)),
-    });
-    return { transaction, task };
+  const { error: decisionError } = await supabase.rpc(
+    decision === 'approve' ? 'approve_payment' : 'decline_payment',
+    { p_transaction_id: transactionId },
+  );
+  if (decisionError) {
+    throw userFacingError(decisionError, 'The payment could not be updated. Please try again.');
   }
 
-  if (task.completedSteps !== WORK_VERIFIED_STEP) throw new Error('This task is not waiting for payment approval.');
-  if (current.amountUsd > task.budgetUsd) throw new Error('Payment would exceed the approved task budget.');
+  const { data: txRow, error: txError } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', transactionId)
+    .maybeSingle();
+  if (txError || !txRow) throw new Error('The payment was updated, but it could not be reloaded. Please refresh.');
 
-  const transaction: Transaction = { ...current, status: 'approved', decidedAt };
-  const completedTask: Task = { ...task, completedSteps: FINAL_STEP, updatedAt: decidedAt };
-  commit({
-    ...snapshot,
-    transactions: snapshot.transactions.map((tx) => (tx.id === transactionId ? transaction : tx)),
-    tasks: snapshot.tasks.map((item) => (item.id === task.id ? completedTask : item)),
-  });
-  return { transaction, task: completedTask };
+  const transaction = mapTransaction(txRow as TransactionRow);
+  const task = await readTask(transaction.taskId);
+  return { transaction, task };
 }
 
 export async function updateSettings(patch: Partial<WorkspaceSettings>): Promise<WorkspaceSettings> {
-  await wait();
-  const next: WorkspaceSettings = { ...snapshot.settings, ...patch };
+  const current = await fetchWorkspace();
+  const next: WorkspaceSettings = { ...current.settings, ...patch };
   const workspaceName = next.workspaceName.trim();
   if (workspaceName.length < 2) throw new Error('The workspace name needs at least 2 characters.');
   if (!Number.isFinite(next.budgetPoolUsd) || next.budgetPoolUsd < 0) {
     throw new Error('The budget pool must be zero or more.');
   }
 
-  const summary = summarizeBudget(next, snapshot.tasks, snapshot.transactions);
+  const summary = summarizeBudget(next, current.tasks, current.transactions);
   const committedUsd = summary.reservedUsd + summary.spentUsd;
   if (next.budgetPoolUsd < committedUsd) {
     throw new Error(`The pool cannot drop below ${formatUsd(committedUsd)} already reserved or spent.`);
   }
 
-  const settings = { ...next, workspaceName };
-  commit({ ...snapshot, settings });
-  return settings;
+  const { data, error } = await supabase
+    .from('workspace_settings')
+    .update({
+      workspace_name: workspaceName,
+      budget_pool_usd: next.budgetPoolUsd,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', 1)
+    .select('workspace_name, budget_pool_usd')
+    .single();
+
+  if (error) throw userFacingError(error, 'Your settings could not be saved. Please try again.');
+  return mapSettings(data as SettingsRow);
 }
