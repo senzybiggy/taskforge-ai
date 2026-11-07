@@ -9,13 +9,15 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       buffer: 'buffer/',
+      process: 'process/browser',
     },
   },
   define: {
     global: 'globalThis',
+    'process.env': {},
   },
   optimizeDeps: {
-    include: ['buffer'],
+    include: ['buffer', 'process/browser'],
     exclude: ['lucide-react'],
   },
 });
