@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Link2, Loader2, LogOut, Wallet } from 'lucide-react';
+import { ExternalLink, Link2, Loader2, LogOut, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { useWallet } from '@/hooks/useWallet';
-import { NEAR_NETWORK_ID } from '@/services/nearWallet';
+import { NEAR_NETWORK_ID, isEmbeddedInCrossOriginFrame } from '@/services/nearWallet';
 
 export function NearWalletCard() {
   const { status, accountId, error, connect, disconnect } = useWallet();
   const [disconnecting, setDisconnecting] = useState(false);
+  const embedded = isEmbeddedInCrossOriginFrame();
 
   const handleDisconnect = async () => {
     setDisconnecting(true);
@@ -32,12 +33,27 @@ export function NearWalletCard() {
             </Badge>
           </div>
           <p className="mt-1 text-sm text-slate-400">
-            Connect a NEAR testnet wallet to test sign-in. Payments remain simulated, and no real funds move.
+            {connected
+              ? 'Sign-in is verified by your NEAR testnet wallet. Payments remain simulated, and no real funds move.'
+              : 'Connect a NEAR testnet wallet to test sign-in. Payments remain simulated, and no real funds move.'}
           </p>
           {connected && (
             <p className="mt-3 truncate rounded-lg bg-white/[0.04] px-3 py-2 font-mono text-sm text-slate-100 ring-1 ring-inset ring-white/10">
               {accountId}
             </p>
+          )}
+          {embedded && !connected && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+              <span>Meteor Wallet sign-in opens a secure popup that browsers block inside embedded previews. Open TaskForge in its own tab to use it.</span>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<ExternalLink className="h-4 w-4" />}
+                onClick={() => window.open(window.location.href, '_blank', 'noopener,noreferrer')}
+              >
+                Open in new tab
+              </Button>
+            </div>
           )}
           {error && (
             <p role="alert" className="mt-3 rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">

@@ -5,6 +5,16 @@ import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
 import '@near-wallet-selector/modal-ui/styles.css';
 
 export const NEAR_NETWORK_ID = 'testnet';
+export const MY_NEAR_WALLET_TESTNET_URL = 'https://testnet.mynearwallet.com';
+
+export function isEmbeddedInCrossOriginFrame(): boolean {
+  try {
+    void window.top?.outerHeight;
+    return false;
+  } catch {
+    return true;
+  }
+}
 
 const sessionStorageService = {
   getItem: async (key: string) => window.sessionStorage.getItem(key),
@@ -18,9 +28,10 @@ export interface NearWalletConnection {
 }
 
 export async function createNearWalletConnection(): Promise<NearWalletConnection> {
+  const meteorModules = isEmbeddedInCrossOriginFrame() ? [] : [setupMeteorWallet()];
   const selector = await setupWalletSelector({
     network: NEAR_NETWORK_ID,
-    modules: [setupMeteorWallet(), setupMyNearWallet()],
+    modules: [...meteorModules, setupMyNearWallet({ walletUrl: MY_NEAR_WALLET_TESTNET_URL })],
     storage: sessionStorageService,
   });
   const modal = setupModal(selector, { theme: 'dark' });
