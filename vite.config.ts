@@ -8,9 +8,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      buffer: 'buffer/',
     },
   },
+  define: {
+    global: 'globalThis',
+  },
   optimizeDeps: {
+    include: ['buffer'],
     exclude: ['lucide-react'],
   },
 });
