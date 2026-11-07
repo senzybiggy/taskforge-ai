@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { WalletContext, type WalletContextValue, type WalletStatus } from '@/context/walletStore';
 import {
   createNearWalletConnection,
-  getActiveAccountId,
+  fetchVerifiedAccountId,
   signOutOfNearWallet,
   type NearWalletConnection,
 } from '@/services/nearWallet';
@@ -23,15 +23,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     connectionRef.current ??= createNearWalletConnection();
-    const refreshAccount = (next: NearWalletConnection) => setAccountId(getActiveAccountId(next.selector));
+    const refreshAccount = async (next: NearWalletConnection) => {
+      const verified = await fetchVerifiedAccountId(next.selector);
+      if (active) setAccountId(verified);
+    };
 
     connectionRef.current
       .then((next) => {
         if (!active) return;
         setConnection(next);
-        refreshAccount(next);
         setStatus('ready');
-        WALLET_EVENTS.forEach((event) => next.selector.on(event, () => refreshAccount(next)));
+        void refreshAccount(next);
+        WALLET_EVENTS.forEach((event) => next.selector.on(event, () => void refreshAccount(next)));
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -55,7 +58,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       await signOutOfNearWallet(connection.selector);
-      setAccountId(getActiveAccountId(connection.selector));
+      setAccountId(null);
     } catch (err) {
       setError(errorMessage(err));
     }

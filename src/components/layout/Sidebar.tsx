@@ -1,6 +1,16 @@
 import { Bot, Hexagon, LayoutDashboard, ListChecks, Receipt, Settings, Wallet, X, type LucideIcon } from 'lucide-react';
 import type { Route } from '@/lib/routes';
 import { Badge } from '@/components/ui/Badge';
+import { useWallet } from '@/hooks/useWallet';
+import type { WalletStatus } from '@/context/walletStore';
+import { NEAR_NETWORK_ID } from '@/services/nearWallet';
+
+function walletLabel(status: WalletStatus, accountId: string | null): string {
+  if (accountId) return `Connected to ${NEAR_NETWORK_ID}`;
+  if (status === 'initializing') return 'Checking wallet';
+  if (status === 'error') return 'Wallet unavailable';
+  return 'Not connected';
+}
 
 interface NavItem {
   key: Route['name'];
@@ -30,6 +40,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ route, onNavigate, open, onClose }: SidebarProps) {
+  const { status, accountId } = useWallet();
   const content = (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-5 py-6">
@@ -74,15 +85,18 @@ export function Sidebar({ route, onNavigate, open, onClose }: SidebarProps) {
 
       <div className="mt-auto space-y-3 p-3">
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2 text-xs font-medium text-slate-300">
               <Wallet className="h-3.5 w-3.5 text-slate-500" />
               NEAR wallet
             </span>
-            <Badge tone="neutral">Not connected</Badge>
+            <Badge tone={accountId ? 'emerald' : 'neutral'} dot={accountId !== null}>
+              {walletLabel(status, accountId)}
+            </Badge>
           </div>
+          {accountId && <p className="mt-2 truncate font-mono text-xs text-slate-200">{accountId}</p>}
           <p className="mt-2 text-xs leading-relaxed text-slate-500">
-            Payments are internal ledger entries until wallet and on-chain settlement are enabled.
+            Payments are simulated ledger entries. No real NEAR transactions are sent yet.
           </p>
         </div>
       </div>

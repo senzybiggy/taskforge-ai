@@ -66,9 +66,15 @@ export async function createNearWalletConnection(): Promise<NearWalletConnection
   return { selector, modal };
 }
 
-export function getActiveAccountId(selector: WalletSelector): string | null {
-  const { accounts } = selector.store.getState();
-  return accounts.find((account) => account.active)?.accountId ?? accounts[0]?.accountId ?? null;
+export async function fetchVerifiedAccountId(selector: WalletSelector): Promise<string | null> {
+  if (!selector.store.getState().selectedWalletId) return null;
+  try {
+    const wallet = await selector.wallet();
+    const accounts = (await wallet.getAccounts()).filter((account) => account.accountId);
+    return accounts[0]?.accountId ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function signOutOfNearWallet(selector: WalletSelector): Promise<void> {
