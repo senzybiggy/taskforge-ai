@@ -1,5 +1,6 @@
 import { setupWalletSelector, type WalletSelector } from '@near-wallet-selector/core';
 import { setupModal, type WalletSelectorModal } from '@near-wallet-selector/modal-ui';
+import { setupMeteorWallet } from '@near-wallet-selector/meteor-wallet';
 import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
 import '@near-wallet-selector/modal-ui/styles.css';
 
@@ -19,7 +20,7 @@ export interface NearWalletConnection {
 export async function createNearWalletConnection(): Promise<NearWalletConnection> {
   const selector = await setupWalletSelector({
     network: NEAR_NETWORK_ID,
-    modules: [setupMyNearWallet()],
+    modules: [setupMeteorWallet(), setupMyNearWallet()],
     storage: sessionStorageService,
   });
   const modal = setupModal(selector, { theme: 'dark' });
