@@ -1,5 +1,5 @@
 import { Check, Loader2 } from 'lucide-react';
-import { COORDINATOR_STEPS, FINAL_STEP } from '@/lib/coordinator/steps';
+import { COORDINATOR_STEPS, FINAL_STEP, activeStepId } from '@/lib/coordinator/steps';
 import { formatUsd } from '@/lib/format';
 import type { Agent, Task } from '@/types/domain';
 
@@ -20,22 +20,25 @@ function stepDetail(step: number, task: Task, agents: Agent[]): string | null {
       return task.bids.some((bid) => bid.score !== null) ? 'Ranked by score' : null;
     case 5:
       return selected ? `${selected.name} confirmed` : null;
+    case 6:
+      if (!task.deliverable) return null;
+      return task.deliverable.reviewedAt ? 'Simulated deliverable reviewed' : 'Simulated deliverable ready for review';
     case 7:
       return task.verificationScore !== null ? `Verification score ${task.verificationScore}/100` : null;
     case 8:
-      return task.completedSteps >= FINAL_STEP ? `${formatUsd(task.bids.find((bid) => bid.agentId === task.selectedAgentId)?.amountUsd ?? 0)} released` : null;
+      return task.completedSteps >= FINAL_STEP ? `${formatUsd(task.bids.find((bid) => bid.agentId === task.selectedAgentId)?.amountUsd ?? 0)} simulated payment recorded` : null;
     default:
       return null;
   }
 }
 
 export function WorkflowStepper({ task, agents, running }: WorkflowStepperProps) {
-  const currentStep = task.completedSteps >= FINAL_STEP ? FINAL_STEP + 1 : task.completedSteps + 1;
+  const currentStep = task.completedSteps >= FINAL_STEP ? null : activeStepId(task.completedSteps);
 
   return (
     <ol className="relative flex flex-col" aria-label="Coordinator workflow">
       {COORDINATOR_STEPS.map((step, index) => {
-        const done = step.id <= task.completedSteps;
+        const done = step.id <= task.completedSteps && step.id !== currentStep;
         const current = step.id === currentStep;
         const isLast = index === COORDINATOR_STEPS.length - 1;
         const detail = done ? stepDetail(step.id, task, agents) : null;

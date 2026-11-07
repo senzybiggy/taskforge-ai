@@ -41,6 +41,7 @@ function toTaskColumns(patch: TaskProgressPatch): Record<string, unknown> {
   if (patch.subtasks !== undefined) columns.subtasks = patch.subtasks;
   if (patch.bids !== undefined) columns.bids = patch.bids;
   if (patch.verificationScore !== undefined) columns.verification_score = patch.verificationScore;
+  if (patch.deliverable !== undefined) columns.deliverable = patch.deliverable;
   return columns;
 }
 

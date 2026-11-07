@@ -5,7 +5,6 @@ import type { Task } from '@/types/domain';
 
 function stepDelay(completedSteps: number): number {
   if (completedSteps === 5) return 1200;
-  if (completedSteps === 6) return 2600;
   return 900;
 }
 

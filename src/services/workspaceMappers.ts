@@ -1,6 +1,7 @@
 import type {
   Agent,
   Bid,
+  Deliverable,
   Specialization,
   Subtask,
   Task,
@@ -38,6 +39,7 @@ export interface TaskRow {
   subtasks: unknown;
   bids: unknown;
   verification_score: number | null;
+  deliverable: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -74,6 +76,10 @@ export function mapAgent(row: AgentRow): Agent {
   };
 }
 
+function isDeliverable(value: unknown): value is Deliverable {
+  return typeof value === 'object' && value !== null && Array.isArray((value as Deliverable).projects);
+}
+
 function mapBid(raw: unknown): Bid {
   const bid = raw as Partial<Bid>;
   return {
@@ -101,6 +107,7 @@ export function mapTask(row: TaskRow): Task {
     subtasks: Array.isArray(row.subtasks) ? (row.subtasks as Subtask[]) : [],
     bids: Array.isArray(row.bids) ? row.bids.map(mapBid) : [],
     verificationScore: row.verification_score,
+    deliverable: isDeliverable(row.deliverable) ? row.deliverable : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

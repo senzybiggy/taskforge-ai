@@ -26,7 +26,12 @@ export function nextStepFor(task: Task): string {
   if (task.completedSteps === 3 && task.bids.length === 0) {
     return 'No agent fits the budget. Raise the budget or adjust the required skills.';
   }
-  if (task.completedSteps >= 5) return 'The agent is working on your brief. Progress updates appear on the task page.';
+  if (task.completedSteps === 5) return 'The agent is hired and moving into work in progress.';
+  if (task.completedSteps === 6) {
+    if (!task.deliverable) return 'Start the work to generate the agent’s simulated deliverable.';
+    if (!task.deliverable.reviewedAt) return 'Review the simulated deliverable, then mark it reviewed.';
+    return 'Verify the work to unlock the simulated payment.';
+  }
   return 'The coordinator is analyzing your brief and gathering bids.';
 }
 

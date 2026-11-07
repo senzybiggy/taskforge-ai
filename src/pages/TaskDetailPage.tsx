@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Bot, Calendar, SearchX, Wallet } from 'lucide-react';
 import { BidComparison } from '@/components/coordinator/BidComparison';
 import { CoordinatorPanel } from '@/components/coordinator/CoordinatorPanel';
+import { DeliverableReview } from '@/components/coordinator/DeliverableReview';
 import { PaymentPanel } from '@/components/coordinator/PaymentPanel';
 import { SubjobList } from '@/components/coordinator/SubjobList';
 import { WorkflowStepper } from '@/components/coordinator/WorkflowStepper';
@@ -12,6 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Panel } from '@/components/ui/Panel';
 import { useAppData } from '@/hooks/useAppData';
 import { useCoordinatorRun } from '@/hooks/useCoordinatorRun';
+import { useWorkExecution } from '@/hooks/useWorkExecution';
 import { recommendedBid } from '@/lib/coordinator/engine';
 import { FINAL_STEP } from '@/lib/coordinator/steps';
 import { agentLookup } from '@/lib/dashboardStats';
@@ -57,6 +59,7 @@ interface TaskWorkspaceProps {
 function TaskWorkspace({ task, navigate }: TaskWorkspaceProps) {
   const { agents, transactions } = useAppData();
   const { running, error, stalled, start, confirmAgent } = useCoordinatorRun();
+  const { working, error: workError, startWork, markReviewed, verifyWork } = useWorkExecution();
   const [pickedId, setPickedId] = useState<string | null>(null);
 
   const agentById = agentLookup(agents);
@@ -130,10 +133,16 @@ function TaskWorkspace({ task, navigate }: TaskWorkspaceProps) {
             pickedAgent={pickedAgent}
             running={running}
             stalled={stalled}
-            error={error}
+            working={working}
+            error={error ?? workError}
             onStart={() => start(task)}
             onConfirmAgent={() => activePickId && confirmAgent(task, activePickId)}
+            onStartWork={() => selectedAgent && startWork(task, selectedAgent)}
+            onMarkReviewed={() => markReviewed(task)}
+            onVerifyWork={() => verifyWork(task)}
           />
+
+          {task.deliverable && <DeliverableReview deliverable={task.deliverable} />}
 
           {task.bids.length > 0 && (
             <BidComparison
@@ -155,7 +164,7 @@ function TaskWorkspace({ task, navigate }: TaskWorkspaceProps) {
             <h2 className="font-display text-lg font-semibold text-white">Workflow</h2>
             <p className="mt-1 text-sm text-slate-400">Eight steps from brief to paid work.</p>
             <div className="mt-6">
-              <WorkflowStepper task={task} agents={agents} running={running} />
+              <WorkflowStepper task={task} agents={agents} running={running || working} />
             </div>
           </Panel>
 

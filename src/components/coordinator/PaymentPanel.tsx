@@ -63,7 +63,7 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
         <CreditCard className="h-3.5 w-3.5" />
         Payment approval
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-slate-400">Nothing is paid until you approve it. Spend can never exceed the task budget.</p>
+      <p className="mt-2 text-sm leading-relaxed text-slate-400">Nothing is paid until you approve it. Approval records a simulated demo payment, and spend can never exceed the task budget.</p>
 
       <dl className="mt-5 divide-y divide-white/[0.06] rounded-xl border border-white/[0.07] bg-ink-900/50">
         <SummaryRow label="Task budget" value={formatUsd(task.budgetUsd)} />
@@ -76,9 +76,9 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
           <div className="flex items-start gap-3 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] p-4">
             <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
             <div>
-              <p className="font-medium text-white">Payment approved</p>
+              <p className="font-medium text-white">Simulated payment approved</p>
               <p className="mt-1 text-sm text-slate-400">
-                {formatUsdPrecise(approved.amountUsd)} released on {formatDate(approved.decidedAt ?? approved.createdAt)}.
+                {formatUsdPrecise(approved.amountUsd)} recorded as a simulated payment on {formatDate(approved.decidedAt ?? approved.createdAt)}. No NEAR was sent.
               </p>
             </div>
           </div>
@@ -117,7 +117,7 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
         ) : (
           <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 text-sm text-slate-400">
             <Lock className="h-4 w-4 shrink-0 text-slate-500" />
-            Payment unlocks after the work is verified.
+            Payment unlocks after you review the simulated deliverable and verify the work.
           </div>
         )}
       </div>
@@ -133,7 +133,7 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}
           title="Approve this payment?"
-          description="This releases the agreed amount to the agent. It cannot be undone."
+          description="This records a simulated payment of the agreed amount. No NEAR is sent and it cannot be undone."
           footer={
             <>
               <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={busy !== null}>

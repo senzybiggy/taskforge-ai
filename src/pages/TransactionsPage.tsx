@@ -68,7 +68,7 @@ export function TransactionsPage({ navigate }: TransactionsPageProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <SummaryCard icon={BadgeCheck} label="Approved spend" value={formatUsd(approvedVolume(transactions))} tone="emerald" />
+        <SummaryCard icon={BadgeCheck} label="Approved spend (simulated)" value={formatUsd(approvedVolume(transactions))} tone="emerald" />
         <SummaryCard icon={Clock} label="Awaiting approval" value={formatUsd(budget?.pendingUsd ?? 0)} tone="amber" />
         <SummaryCard icon={Wallet} label="Available budget" value={formatUsd(budget?.availableUsd ?? 0)} tone="blue" />
       </div>
@@ -114,7 +114,7 @@ export function TransactionsPage({ navigate }: TransactionsPageProps) {
         open={confirming !== null}
         onClose={() => setConfirming(null)}
         title="Approve this payment?"
-        description="This releases the agreed amount to the agent. It cannot be undone."
+        description="This records a simulated payment of the agreed amount. No NEAR is sent and it cannot be undone."
         footer={
           confirming && (
             <>

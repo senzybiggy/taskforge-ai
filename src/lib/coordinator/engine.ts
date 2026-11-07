@@ -2,7 +2,7 @@ import type { Agent, Bid, Subtask, Task, TaskProgressPatch } from '@/types/domai
 import { daysUntil } from '@/lib/format';
 import { FINAL_STEP } from '@/lib/coordinator/steps';
 
-const AUTOMATIC_STEPS = new Set([1, 2, 3, 5, 6]);
+const AUTOMATIC_STEPS = new Set([1, 2, 3, 5]);
 const DEADLINE_MISS_MULTIPLIER = 0.7;
 const PASS_SCORE = 80;
 
@@ -111,8 +111,6 @@ export function nextAutomaticPatch(task: Task, agents: Agent[]): TaskProgressPat
     }
     case 5:
       return { completedSteps: 6 };
-    case 6:
-      return { verificationScore: verifyDeliverable(task), completedSteps: 7 };
     default:
       return null;
   }

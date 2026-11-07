@@ -62,6 +62,34 @@ export interface Bid {
   skillMatch: number;
 }
 
+export interface DeliverableSource {
+  title: string;
+  url: string;
+}
+
+export interface DeliverableProject {
+  name: string;
+  role: string;
+  functions: string[];
+  strengths: string[];
+  weaknesses: string[];
+  source: DeliverableSource;
+}
+
+export interface Deliverable {
+  title: string;
+  agentName: string;
+  generatedAt: string;
+  reviewedAt: string | null;
+  summary: string;
+  method: string[];
+  projects: DeliverableProject[];
+  comparison: string[];
+  recommendations: string[];
+  sources: DeliverableSource[];
+  disclaimer: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -76,12 +104,13 @@ export interface Task {
   subtasks: Subtask[];
   bids: Bid[];
   verificationScore: number | null;
+  deliverable: Deliverable | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export type TaskProgressPatch = Partial<
-  Pick<Task, 'completedSteps' | 'selectedAgentId' | 'subtasks' | 'bids' | 'verificationScore'>
+  Pick<Task, 'completedSteps' | 'selectedAgentId' | 'subtasks' | 'bids' | 'verificationScore' | 'deliverable'>
 >;
 
 export type TransactionStatus = 'pending_approval' | 'approved' | 'declined';
