@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { BadgeCheck, Link2, Wallet } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
+import { BadgeCheck } from 'lucide-react';
+import { NearWalletCard } from '@/components/wallet/NearWalletCard';
 import { Button } from '@/components/ui/Button';
 import { Field, TextInput } from '@/components/ui/Field';
 import { Panel } from '@/components/ui/Panel';
@@ -123,25 +123,7 @@ export function SettingsPage() {
           </form>
         </Panel>
 
-        <Panel className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-          <div className="flex items-start gap-4">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-slate-400 ring-1 ring-inset ring-white/10">
-              <Wallet className="h-5 w-5" />
-            </span>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="font-display text-base font-semibold text-white">NEAR wallet</h2>
-                <Badge tone="neutral">Not connected</Badge>
-              </div>
-              <p className="mt-1 text-sm text-slate-400">
-                Wallet connection arrives with the NEAR integration. Until then, every payment is a simulated local record.
-              </p>
-            </div>
-          </div>
-          <Button variant="secondary" disabled icon={<Link2 className="h-4 w-4" />} className="sm:shrink-0">
-            Connect wallet
-          </Button>
-        </Panel>
+        <NearWalletCard />
       </div>
 
       <Panel className="flex h-fit flex-col gap-6 p-6 sm:p-7">

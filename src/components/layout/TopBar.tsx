@@ -1,5 +1,6 @@
 import { Menu, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useWallet } from '@/hooks/useWallet';
 import { formatUsd } from '@/lib/format';
 
 interface TopBarProps {
@@ -11,6 +12,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ title, subtitle, availableUsd, onMenu, onCreateTask }: TopBarProps) {
+  const { accountId } = useWallet();
   return (
     <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-ink-950/80 backdrop-blur-xl">
       <div className="flex items-center gap-4 px-4 py-4 sm:px-8">
@@ -26,6 +28,12 @@ export function TopBar({ title, subtitle, availableUsd, onMenu, onCreateTask }: 
           <h1 className="truncate font-display text-xl font-semibold text-white sm:text-2xl">{title}</h1>
           <p className="hidden truncate text-sm text-slate-400 sm:block">{subtitle}</p>
         </div>
+        {accountId && (
+          <div className="hidden max-w-[12rem] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 lg:flex" title="Connected NEAR testnet account">
+            <span className="text-xs text-slate-400">Wallet</span>
+            <span className="truncate font-mono text-sm text-slate-100">{accountId}</span>
+          </div>
+        )}
         {availableUsd !== null && (
           <div className="hidden items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.07] px-3 py-2 md:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
