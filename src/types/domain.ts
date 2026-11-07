@@ -43,6 +43,8 @@ export interface Agent {
   basePriceUsd: number;
   avgDeliveryDays: number;
   isOnline: boolean;
+  skills: string[];
+  isDemo: boolean;
 }
 
 export interface Subtask {
@@ -56,6 +58,8 @@ export interface Bid {
   amountUsd: number;
   etaDays: number;
   score: number | null;
+  matchedSkills: string[];
+  skillMatch: number;
 }
 
 export interface Task {

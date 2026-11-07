@@ -26,6 +26,7 @@ export function AgentCard({ agent, selected, onSelect, onDetails }: AgentCardPro
         <AgentAvatar category={agent.category} size="lg" />
         <div className="flex flex-col items-end gap-2">
           {selected && <Badge tone="blue">Selected</Badge>}
+          {agent.isDemo && <Badge tone="neutral">Demo agent</Badge>}
           <Badge tone={agent.isOnline ? 'emerald' : 'neutral'} dot>
             {agent.isOnline ? 'Online' : 'Offline'}
           </Badge>
@@ -36,6 +37,15 @@ export function AgentCard({ agent, selected, onSelect, onDetails }: AgentCardPro
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-blue-300/80">{agent.category}</p>
         <h3 className="mt-1 font-display text-lg font-semibold text-white">{agent.name}</h3>
         <p className="mt-1.5 text-sm text-slate-400">{agent.tagline}</p>
+        {agent.skills.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {agent.skills.map((skill) => (
+              <span key={skill} className="rounded-full bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-slate-300 ring-1 ring-inset ring-white/10">
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-3 rounded-xl border border-white/[0.06] bg-ink-950/40 p-3">

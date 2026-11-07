@@ -33,15 +33,25 @@ export function planSubtasks(task: Pick<Task, 'id' | 'specialization'>): Subtask
   return plan.map((item, index) => ({ id: `${task.id}-${index}`, ...item }));
 }
 
+export const SCORE_WEIGHTS = {
+  skill: 0.35,
+  reputation: 0.25,
+  price: 0.25,
+  speed: 0.15,
+} as const;
+
 export function discoverBids(task: Task, agents: Agent[]): Bid[] {
   return agents
     .filter((agent) => agent.isOnline && agent.category === task.specialization)
-    .map((agent) => {
+    .flatMap((agent) => {
+      const matchedSkills = task.skills.filter((skill) => agent.skills.includes(skill));
+      if (task.skills.length > 0 && matchedSkills.length === 0) return [];
       const variance = unitHash(`${agent.id}:${task.id}`);
       const rawAmount = agent.basePriceUsd * (0.88 + variance * 0.26);
       const amountUsd = Math.round(rawAmount / 10) * 10;
       const etaDays = Math.max(1, agent.avgDeliveryDays + Math.round(variance * 2));
-      return { agentId: agent.id, amountUsd, etaDays, score: null };
+      const skillMatch = task.skills.length === 0 ? 1 : matchedSkills.length / task.skills.length;
+      return [{ agentId: agent.id, amountUsd, etaDays, score: null, matchedSkills, skillMatch }];
     })
     .filter((bid) => bid.amountUsd <= task.budgetUsd)
     .sort((a, b) => a.amountUsd - b.amountUsd);
@@ -62,12 +72,18 @@ export function scoreBids(task: Task, agents: Agent[], bids: Bid[]): Bid[] {
       const reputationScore = agent.reputation / 100;
       const priceScore = minAmount / bid.amountUsd;
       const speedScore = minEta / bid.etaDays;
-      const raw = 100 * (0.5 * reputationScore + 0.3 * priceScore + 0.2 * speedScore);
+      const raw =
+        100 *
+        (SCORE_WEIGHTS.skill * bid.skillMatch +
+          SCORE_WEIGHTS.reputation * reputationScore +
+          SCORE_WEIGHTS.price * priceScore +
+          SCORE_WEIGHTS.speed * speedScore);
       const deadlineFactor = bid.etaDays <= daysLeft ? 1 : DEADLINE_MISS_MULTIPLIER;
       return [{ ...bid, score: Math.round(raw * deadlineFactor) }];
     })
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || b.skillMatch - a.skillMatch);
 }
+
 
 export function recommendedBid(bids: Bid[]): Bid | undefined {
   return bids.find((bid) => bid.score !== null) ?? bids[0];

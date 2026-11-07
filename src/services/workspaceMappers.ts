@@ -20,6 +20,8 @@ export interface AgentRow {
   base_price_usd: number | string;
   avg_delivery_days: number;
   is_online: boolean;
+  skills: string[] | null;
+  is_demo: boolean;
 }
 
 export interface TaskRow {
@@ -67,6 +69,20 @@ export function mapAgent(row: AgentRow): Agent {
     basePriceUsd: Number(row.base_price_usd),
     avgDeliveryDays: row.avg_delivery_days,
     isOnline: row.is_online,
+    skills: row.skills ?? [],
+    isDemo: row.is_demo,
+  };
+}
+
+function mapBid(raw: unknown): Bid {
+  const bid = raw as Partial<Bid>;
+  return {
+    agentId: String(bid.agentId),
+    amountUsd: Number(bid.amountUsd),
+    etaDays: Number(bid.etaDays),
+    score: typeof bid.score === 'number' ? bid.score : null,
+    matchedSkills: Array.isArray(bid.matchedSkills) ? bid.matchedSkills : [],
+    skillMatch: typeof bid.skillMatch === 'number' ? bid.skillMatch : 0,
   };
 }
 
@@ -83,7 +99,7 @@ export function mapTask(row: TaskRow): Task {
     selectedAgentId: row.selected_agent_id,
     completedSteps: row.completed_steps,
     subtasks: Array.isArray(row.subtasks) ? (row.subtasks as Subtask[]) : [],
-    bids: Array.isArray(row.bids) ? (row.bids as Bid[]) : [],
+    bids: Array.isArray(row.bids) ? row.bids.map(mapBid) : [],
     verificationScore: row.verification_score,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
