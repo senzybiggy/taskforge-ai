@@ -1,4 +1,4 @@
-import { setupWalletSelector, type InjectedWallet, type WalletModule, type WalletModuleFactory, type WalletSelector } from '@near-wallet-selector/core';
+import { actionCreators, setupWalletSelector, type InjectedWallet, type WalletModule, type WalletModuleFactory, type WalletSelector } from '@near-wallet-selector/core';
 import { setupModal, type WalletSelectorModal } from '@near-wallet-selector/modal-ui';
 import { setupMeteorWallet } from '@near-wallet-selector/meteor-wallet';
 import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
@@ -80,4 +80,37 @@ export async function fetchVerifiedAccountId(selector: WalletSelector): Promise<
 export async function signOutOfNearWallet(selector: WalletSelector): Promise<void> {
   const wallet = await selector.wallet();
   await wallet.signOut();
+}
+export async function sendTestnetTransfer(
+  selector: WalletSelector,
+  receiverId: string,
+  amountInNear: string
+): Promise<void> {
+  if (selector.options.network.networkId !== 'testnet') {
+    throw new Error('This transaction is only allowed on NEAR Testnet.');
+  }
+
+  if (!/^[a-z0-9._-]+$/.test(receiverId)) {
+    throw new Error('Invalid NEAR receiver account ID.');
+  }
+
+  const amount = Number(amountInNear);
+
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 0.001) {
+    throw new Error('Test transfer must be greater than zero and no more than 0.001 NEAR.');
+  }
+
+  const wallet = await selector.wallet();
+
+  await wallet.signAndSendTransaction({
+    receiverId,
+    actions: [
+      {
+        type: 'Transfer',
+        params: {
+          deposit: BigInt(Math.floor(amount * 1e24)).toString(),
+        },
+      },
+    ],
+  });
 }
