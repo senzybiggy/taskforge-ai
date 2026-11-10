@@ -49,6 +49,7 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
   const [phase, setPhase] = useState<Phase>(pending ? 'record_failed' : 'idle');
   const [txHash, setTxHash] = useState<string | null>(pending?.txHash ?? null);
   const [error, setError] = useState<string | null>(pending ? RECORD_FAILED : null);
+  const [reviewed, setReviewed] = useState(false);
   const sendInFlight = useRef(false);
 
   const busy = phase === 'sending' || phase === 'recording';
@@ -56,7 +57,7 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
   const trimmedRecipient = recipient.trim();
   const recipientValid = isTestnetAccountId(trimmedRecipient);
   const recipientInvalid = trimmedRecipient.length > 0 && !recipientValid;
-  const canApprove = connected && recipientValid && phase === 'idle';
+  const canApprove = connected && recipientValid && reviewed && phase === 'idle';
 
   const close = () => {
     if (!busy) onClose();
@@ -151,7 +152,9 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
         <dl className="divide-y divide-white/[0.06] rounded-xl border border-white/[0.07] bg-ink-900/50">
           <SummaryRow label="Task" value={taskTitle} />
           <SummaryRow label="Recorded amount" value={formatUsdPrecise(transaction.amountUsd)} />
-          <SummaryRow label="Test transfer" value={`${TEST_TRANSFER_NEAR} NEAR (testnet)`} />
+          <SummaryRow label="Sender account" value={accountId ?? 'Not connected'} />
+          <SummaryRow label="Recipient account" value={recipientValid ? trimmedRecipient : 'Enter a valid recipient'} />
+          <SummaryRow label="Transfer amount" value={`${TEST_TRANSFER_NEAR} NEAR (testnet)`} />
         </dl>
 
         <div className="flex flex-col gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
@@ -177,7 +180,10 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
             <input
               type="text"
               value={recipient}
-              onChange={(event) => setRecipient(event.target.value)}
+              onChange={(event) => {
+                setRecipient(event.target.value);
+                setReviewed(false);
+              }}
               disabled={!connected || phase !== 'idle'}
               placeholder="name.testnet"
               autoComplete="off"
@@ -193,6 +199,20 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
           <p className="text-sm text-slate-400">Waiting for your approval in the wallet window. Check for a new wallet pop-up.</p>
         )}
         {phase === 'recording' && <p className="text-sm text-slate-400">Saving the payment...</p>}
+
+        {connected && recipientValid && phase === 'idle' && (
+          <label className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={reviewed}
+              onChange={(event) => setReviewed(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-500"
+            />
+            <span>
+              I have checked the sender account, the recipient account, and the {TEST_TRANSFER_NEAR} NEAR transfer amount above.
+            </span>
+          </label>
+        )}
 
         {txHash && <NearTransactionLink txHash={txHash} />}
 
