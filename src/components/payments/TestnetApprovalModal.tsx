@@ -12,6 +12,7 @@ type Phase = 'idle' | 'sending' | 'recording' | 'recorded' | 'record_failed';
 
 interface PendingTransfer {
   txHash: string;
+  sender: string;
   recipient: string;
 }
 
@@ -26,8 +27,8 @@ function readPendingTransfer(transactionId: string): PendingTransfer | null {
   if (!raw) return null;
   try {
     const value = JSON.parse(raw) as Partial<PendingTransfer>;
-    if (typeof value.txHash === 'string' && typeof value.recipient === 'string') {
-      return { txHash: value.txHash, recipient: value.recipient };
+    if (typeof value.txHash === 'string' && typeof value.sender === 'string' && typeof value.recipient === 'string') {
+      return { txHash: value.txHash, sender: value.sender, recipient: value.recipient };
     }
     return null;
   } catch {
@@ -48,6 +49,7 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
   const [recipient, setRecipient] = useState(pending?.recipient ?? '');
   const [phase, setPhase] = useState<Phase>(pending ? 'record_failed' : 'idle');
   const [txHash, setTxHash] = useState<string | null>(pending?.txHash ?? null);
+  const [signer, setSigner] = useState<string | null>(pending?.sender ?? null);
   const [error, setError] = useState<string | null>(pending ? RECORD_FAILED : null);
   const [reviewed, setReviewed] = useState(false);
   const sendInFlight = useRef(false);
@@ -63,11 +65,11 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
     if (!busy) onClose();
   };
 
-  const record = async (hash: string, to: string) => {
+  const record = async (hash: string, from: string, to: string) => {
     setPhase('recording');
     setError(null);
     try {
-      await recordTestnetApproval(transaction, hash, to);
+      await recordTestnetApproval(transaction, hash, from, to);
       localStorage.removeItem(pendingKey(transaction.id));
       setPhase('recorded');
     } catch {
@@ -78,7 +80,7 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
 
   const approve = async () => {
     if (sendInFlight.current) return;
-    if (!connected) {
+    if (!connected || !accountId) {
       setError('Connect your NEAR testnet wallet first.');
       return;
     }
@@ -99,10 +101,11 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
       return;
     }
     sendInFlight.current = false;
-    const pendingTransfer: PendingTransfer = { txHash: hash, recipient: trimmedRecipient };
+    const pendingTransfer: PendingTransfer = { txHash: hash, sender: accountId, recipient: trimmedRecipient };
     localStorage.setItem(pendingKey(transaction.id), JSON.stringify(pendingTransfer));
     setTxHash(hash);
-    await record(hash, trimmedRecipient);
+    setSigner(accountId);
+    await record(hash, accountId, trimmedRecipient);
   };
 
   const footer = (
@@ -116,7 +119,7 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
           <Button variant="ghost" onClick={close}>
             Close
           </Button>
-          <Button variant="success" onClick={() => record(txHash, trimmedRecipient)} loading={busy}>
+          <Button variant="success" onClick={() => signer && record(txHash, signer, trimmedRecipient)} loading={busy}>
             Retry saving
           </Button>
         </>

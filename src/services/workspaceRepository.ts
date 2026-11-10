@@ -153,12 +153,14 @@ async function readTransactionAndTask(transactionId: string): Promise<{ transact
 export async function recordTestnetPayment(
   transactionId: string,
   txHash: string,
+  sender: string,
   recipient: string,
   amountNear: string,
 ): Promise<{ transaction: Transaction; task: Task }> {
   const { error: recordError } = await supabase.rpc('record_testnet_payment', {
     p_transaction_id: transactionId,
     p_tx_hash: txHash,
+    p_sender: sender,
     p_recipient: recipient,
     p_amount_near: amountNear,
   });

@@ -14,7 +14,7 @@ export interface AppDataContextValue {
   createTask: (input: NewTaskInput) => Promise<Task>;
   saveTaskProgress: (taskId: string, patch: TaskProgressPatch) => Promise<Task>;
   requestPayment: (task: Task) => Promise<Transaction>;
-  recordTestnetApproval: (transaction: Transaction, txHash: string, recipient: string) => Promise<void>;
+  recordTestnetApproval: (transaction: Transaction, txHash: string, sender: string, recipient: string) => Promise<void>;
   declinePayment: (transaction: Transaction) => Promise<void>;
   saveSettings: (patch: Partial<WorkspaceSettings>) => Promise<void>;
 }

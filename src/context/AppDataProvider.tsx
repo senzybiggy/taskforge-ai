@@ -74,8 +74,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleRecordTestnetApproval = useCallback<AppDataContextValue['recordTestnetApproval']>(
-    async (transaction, txHash, recipient) => {
-      applyPaymentResult(await recordTestnetPayment(transaction.id, txHash, recipient, TEST_TRANSFER_NEAR));
+    async (transaction, txHash, sender, recipient) => {
+      applyPaymentResult(await recordTestnetPayment(transaction.id, txHash, sender, recipient, TEST_TRANSFER_NEAR));
     },
     [applyPaymentResult],
   );

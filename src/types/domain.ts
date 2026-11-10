@@ -124,6 +124,7 @@ export interface Transaction {
   createdAt: string;
   decidedAt: string | null;
   nearTxHash: string | null;
+  nearSender: string | null;
   nearRecipient: string | null;
   nearAmountNear: string | null;
   nearNetwork: string | null;

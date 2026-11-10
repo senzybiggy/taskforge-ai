@@ -33,6 +33,16 @@ export function formatDate(value: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+export function formatDateTime(value: string): string {
+  return new Date(value).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export function formatRelative(value: string): string {
   const diffMs = Date.now() - new Date(value).getTime();
   const minutes = Math.round(diffMs / 60000);

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BadgeCheck, Clock, Wallet, type LucideIcon } from 'lucide-react';
 import { TransactionTable, type TransactionRow } from '@/components/transactions/TransactionTable';
+import { TestnetTransferTable } from '@/components/transactions/TestnetTransferTable';
 import { TestnetApprovalModal } from '@/components/payments/TestnetApprovalModal';
 import { Panel } from '@/components/ui/Panel';
 import { useAppData } from '@/hooks/useAppData';
@@ -107,6 +108,8 @@ export function TransactionsPage({ navigate }: TransactionsPageProps) {
           onOpenTask={(taskId) => navigate({ name: 'task', taskId })}
         />
       </div>
+
+      <TestnetTransferTable transactions={transactions} />
 
       {approving && (
         <TestnetApprovalModal
