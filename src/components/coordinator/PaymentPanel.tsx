@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { BadgeCheck, CreditCard, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
+import { NearTransactionLink, TestnetApprovalModal } from '@/components/payments/TestnetApprovalModal';
 import { Panel } from '@/components/ui/Panel';
 import { useAppData } from '@/hooks/useAppData';
 import { formatDate, formatUsd, formatUsdPrecise } from '@/lib/format';
-import { transactionStatus } from '@/lib/labels';
 import { FINAL_STEP } from '@/lib/coordinator/steps';
 import type { Task, Transaction } from '@/types/domain';
 
@@ -20,10 +19,10 @@ function errorMessage(err: unknown): string {
 }
 
 export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
-  const { requestPayment, decidePayment, budget } = useAppData();
-  const [busy, setBusy] = useState<'request' | 'approve' | 'decline' | null>(null);
+  const { requestPayment, declinePayment, budget } = useAppData();
+  const [busy, setBusy] = useState<'request' | 'decline' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   const agreedUsd = task.bids.find((bid) => bid.agentId === task.selectedAgentId)?.amountUsd ?? null;
   const pending = transactions.find((tx) => tx.status === 'pending_approval') ?? null;
@@ -44,12 +43,11 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
     }
   };
 
-  const handleDecision = async (transaction: Transaction, decision: 'approve' | 'decline') => {
-    setBusy(decision);
+  const handleDecline = async (transaction: Transaction) => {
+    setBusy('decline');
     setError(null);
     try {
-      await decidePayment(transaction, decision);
-      setConfirmOpen(false);
+      await declinePayment(transaction);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -63,7 +61,7 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
         <CreditCard className="h-3.5 w-3.5" />
         Payment approval
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-slate-400">Nothing is paid until you approve it. Approval records a simulated demo payment, and spend can never exceed the task budget.</p>
+      <p className="mt-2 text-sm leading-relaxed text-slate-400">Nothing is paid until you approve it. Approval sends a 0.001 NEAR test transfer on NEAR testnet from your wallet, and spend can never exceed the task budget.</p>
 
       <dl className="mt-5 divide-y divide-white/[0.06] rounded-xl border border-white/[0.07] bg-ink-900/50">
         <SummaryRow label="Task budget" value={formatUsd(task.budgetUsd)} />
@@ -76,10 +74,16 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
           <div className="flex items-start gap-3 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] p-4">
             <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
             <div>
-              <p className="font-medium text-white">Simulated payment approved</p>
+              <p className="font-medium text-white">{approved.nearTxHash ? 'Payment approved on NEAR testnet' : 'Simulated payment approved'}</p>
               <p className="mt-1 text-sm text-slate-400">
-                {formatUsdPrecise(approved.amountUsd)} recorded as a simulated payment on {formatDate(approved.decidedAt ?? approved.createdAt)}. No NEAR was sent.
+                {formatUsdPrecise(approved.amountUsd)} recorded on {formatDate(approved.decidedAt ?? approved.createdAt)}.
+                {approved.nearTxHash ? ' A 0.001 NEAR testnet test transfer was sent. No mainnet funds were used.' : ' No NEAR was sent.'}
               </p>
+              {approved.nearTxHash && (
+                <div className="mt-4">
+                  <NearTransactionLink txHash={approved.nearTxHash} />
+                </div>
+              )}
             </div>
           </div>
         ) : pending ? (
@@ -92,14 +96,14 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
               <Badge tone="amber" dot>Pending</Badge>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button className="flex-1" variant="success" onClick={() => setConfirmOpen(true)} disabled={busy !== null}>
+              <Button className="flex-1" variant="success" onClick={() => setApproving(true)} disabled={busy !== null}>
                 Approve payment
               </Button>
               <Button
                 className="flex-1"
                 variant="danger"
                 loading={busy === 'decline'}
-                onClick={() => handleDecision(pending, 'decline')}
+                onClick={() => handleDecline(pending)}
               >
                 Decline
               </Button>
@@ -128,27 +132,8 @@ export function PaymentPanel({ task, transactions }: PaymentPanelProps) {
         </p>
       )}
 
-      {pending && (
-        <Modal
-          open={confirmOpen}
-          onClose={() => setConfirmOpen(false)}
-          title="Approve this payment?"
-          description="This records a simulated payment of the agreed amount. No NEAR is sent and it cannot be undone."
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={busy !== null}>
-                Cancel
-              </Button>
-              <Button variant="success" loading={busy === 'approve'} onClick={() => handleDecision(pending, 'approve')}>
-                Approve {formatUsdPrecise(pending.amountUsd)}
-              </Button>
-            </>
-          }
-        >
-          <p className="text-sm text-slate-300">
-            Status after approval: <span className="font-medium text-emerald-300">{transactionStatus('approved').label}</span>. The task will be marked complete.
-          </p>
-        </Modal>
+      {pending && approving && (
+        <TestnetApprovalModal transaction={pending} taskTitle={task.title} onClose={() => setApproving(false)} />
       )}
     </Panel>
   );

@@ -123,6 +123,10 @@ export interface Transaction {
   status: TransactionStatus;
   createdAt: string;
   decidedAt: string | null;
+  nearTxHash: string | null;
+  nearRecipient: string | null;
+  nearAmountNear: string | null;
+  nearNetwork: string | null;
 }
 
 export interface WorkspaceSettings {

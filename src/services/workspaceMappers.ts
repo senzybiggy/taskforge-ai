@@ -52,6 +52,10 @@ export interface TransactionRow {
   status: TransactionStatus;
   created_at: string;
   decided_at: string | null;
+  near_tx_hash: string | null;
+  near_recipient: string | null;
+  near_amount_near: string | null;
+  near_network: string | null;
 }
 
 export interface SettingsRow {
@@ -122,6 +126,10 @@ export function mapTransaction(row: TransactionRow): Transaction {
     status: row.status,
     createdAt: row.created_at,
     decidedAt: row.decided_at,
+    nearTxHash: row.near_tx_hash,
+    nearRecipient: row.near_recipient,
+    nearAmountNear: row.near_amount_near,
+    nearNetwork: row.near_network,
   };
 }
 

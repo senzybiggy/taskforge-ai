@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { BadgeCheck, Clock, Wallet, type LucideIcon } from 'lucide-react';
 import { TransactionTable, type TransactionRow } from '@/components/transactions/TransactionTable';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
+import { TestnetApprovalModal } from '@/components/payments/TestnetApprovalModal';
 import { Panel } from '@/components/ui/Panel';
 import { useAppData } from '@/hooks/useAppData';
 import { agentLookup, approvedVolume } from '@/lib/dashboardStats';
-import { formatUsd, formatUsdPrecise } from '@/lib/format';
+import { formatUsd } from '@/lib/format';
 import type { Route } from '@/lib/routes';
 import type { Transaction, TransactionStatus } from '@/types/domain';
 
@@ -28,9 +27,9 @@ function errorMessage(err: unknown): string {
 }
 
 export function TransactionsPage({ navigate }: TransactionsPageProps) {
-  const { transactions, tasks, agents, budget, decidePayment } = useAppData();
+  const { transactions, tasks, agents, budget, declinePayment } = useAppData();
   const [tab, setTab] = useState<TransactionTab>('all');
-  const [confirming, setConfirming] = useState<Transaction | null>(null);
+  const [approving, setApproving] = useState<Transaction | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,12 +51,11 @@ export function TransactionsPage({ navigate }: TransactionsPageProps) {
   const countFor = (key: TransactionTab) =>
     key === 'all' ? transactions.length : transactions.filter((tx) => tx.status === key).length;
 
-  const decide = async (transaction: Transaction, decision: 'approve' | 'decline') => {
+  const decline = async (transaction: Transaction) => {
     setBusyId(transaction.id);
     setError(null);
     try {
-      await decidePayment(transaction, decision);
-      setConfirming(null);
+      await declinePayment(transaction);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -103,37 +101,20 @@ export function TransactionsPage({ navigate }: TransactionsPageProps) {
           busyId={busyId}
           onApprove={(transaction) => {
             setError(null);
-            setConfirming(transaction);
+            setApproving(transaction);
           }}
-          onDecline={(transaction) => decide(transaction, 'decline')}
+          onDecline={decline}
           onOpenTask={(taskId) => navigate({ name: 'task', taskId })}
         />
       </div>
 
-      <Modal
-        open={confirming !== null}
-        onClose={() => setConfirming(null)}
-        title="Approve this payment?"
-        description="This records a simulated payment of the agreed amount. No NEAR is sent and it cannot be undone."
-        footer={
-          confirming && (
-            <>
-              <Button variant="ghost" onClick={() => setConfirming(null)} disabled={busyId !== null}>
-                Cancel
-              </Button>
-              <Button variant="success" loading={busyId === confirming.id} onClick={() => decide(confirming, 'approve')}>
-                Approve {formatUsdPrecise(confirming.amountUsd)}
-              </Button>
-            </>
-          )
-        }
-      >
-        {confirming && (
-          <p className="text-sm text-slate-300">
-            This payment is for <span className="font-medium text-white">{taskTitleById.get(confirming.taskId) ?? 'a deleted task'}</span>. Once approved, the task is marked complete.
-          </p>
-        )}
-      </Modal>
+      {approving && (
+        <TestnetApprovalModal
+          transaction={approving}
+          taskTitle={taskTitleById.get(approving.taskId) ?? 'a deleted task'}
+          onClose={() => setApproving(null)}
+        />
+      )}
     </div>
   );
 }

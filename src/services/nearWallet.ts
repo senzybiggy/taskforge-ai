@@ -81,36 +81,55 @@ export async function signOutOfNearWallet(selector: WalletSelector): Promise<voi
   const wallet = await selector.wallet();
   await wallet.signOut();
 }
+
+export const TEST_TRANSFER_NEAR = '0.001';
+const TESTNET_ACCOUNT_PATTERN = /^[a-z0-9._-]+\.testnet$/;
+const YOCTO_PER_MICRO_NEAR = BigInt(10) ** BigInt(18);
+
+export function nearTestnetTransactionUrl(txHash: string): string {
+  return `https://testnet.nearblocks.io/txns/${encodeURIComponent(txHash)}`;
+}
+
+export function isTestnetAccountId(accountId: string): boolean {
+  return TESTNET_ACCOUNT_PATTERN.test(accountId);
+}
+
 export async function sendTestnetTransfer(
   selector: WalletSelector,
   receiverId: string,
-  amountInNear: string
-): Promise<void> {
+  amountInNear: string,
+): Promise<string> {
   if (selector.options.network.networkId !== 'testnet') {
     throw new Error('This transaction is only allowed on NEAR Testnet.');
   }
 
-  if (!/^[a-z0-9._-]+$/.test(receiverId)) {
-    throw new Error('Invalid NEAR receiver account ID.');
+  if (!isTestnetAccountId(receiverId)) {
+    throw new Error('Enter a NEAR testnet account, such as name.testnet.');
   }
 
   const amount = Number(amountInNear);
 
-  if (!Number.isFinite(amount) || amount <= 0 || amount > 0.001) {
+  if (!Number.isFinite(amount) || amount <= 0 || amount > Number(TEST_TRANSFER_NEAR)) {
     throw new Error('Test transfer must be greater than zero and no more than 0.001 NEAR.');
   }
 
+  const microNear = BigInt(Math.round(amount * 1e6));
   const wallet = await selector.wallet();
 
-  await wallet.signAndSendTransaction({
+  const outcome = await wallet.signAndSendTransaction({
     receiverId,
-    actions: [
-      {
-        type: 'Transfer',
-        params: {
-          deposit: BigInt(Math.floor(amount * 1e24)).toString(),
-        },
-      },
-    ],
+    actions: [actionCreators.transfer(microNear * YOCTO_PER_MICRO_NEAR)],
   });
+
+  if (!outcome) {
+    throw new Error('The wallet did not return a result, so the payment was not recorded.');
+  }
+  const { status, transaction } = outcome;
+  if (typeof status !== 'object' || !('SuccessValue' in status)) {
+    throw new Error('The testnet transfer did not succeed, so the payment was not recorded.');
+  }
+  if (!transaction?.hash) {
+    throw new Error('The wallet did not return a transaction hash, so the payment was not recorded.');
+  }
+  return transaction.hash;
 }

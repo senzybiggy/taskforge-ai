@@ -3,6 +3,7 @@ import { WalletContext, type WalletContextValue, type WalletStatus } from '@/con
 import {
   createNearWalletConnection,
   fetchVerifiedAccountId,
+  sendTestnetTransfer as sendTransferFromSelector,
   signOutOfNearWallet,
   type NearWalletConnection,
 } from '@/services/nearWallet';
@@ -64,9 +65,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [connection]);
 
+  const sendTestnetTransfer = useCallback(
+    async (receiverId: string, amountNear: string) => {
+      if (!connection || !accountId) throw new Error('Connect your NEAR testnet wallet before sending a payment.');
+      return sendTransferFromSelector(connection.selector, receiverId, amountNear);
+    },
+    [connection, accountId],
+  );
+
   const value = useMemo<WalletContextValue>(
-    () => ({ status, accountId, error, connect, disconnect }),
-    [status, accountId, error, connect, disconnect],
+    () => ({ status, accountId, error, connect, disconnect, sendTestnetTransfer }),
+    [status, accountId, error, connect, disconnect, sendTestnetTransfer],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

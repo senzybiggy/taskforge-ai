@@ -137,18 +137,7 @@ export async function requestPayment(taskId: string): Promise<Transaction> {
   return mapTransaction(data as TransactionRow);
 }
 
-export async function decidePayment(
-  transactionId: string,
-  decision: 'approve' | 'decline',
-): Promise<{ transaction: Transaction; task: Task }> {
-  const { error: decisionError } = await supabase.rpc(
-    decision === 'approve' ? 'approve_payment' : 'decline_payment',
-    { p_transaction_id: transactionId },
-  );
-  if (decisionError) {
-    throw userFacingError(decisionError, 'The payment could not be updated. Please try again.');
-  }
-
+async function readTransactionAndTask(transactionId: string): Promise<{ transaction: Transaction; task: Task }> {
   const { data: txRow, error: txError } = await supabase
     .from('transactions')
     .select('*')
@@ -159,6 +148,34 @@ export async function decidePayment(
   const transaction = mapTransaction(txRow as TransactionRow);
   const task = await readTask(transaction.taskId);
   return { transaction, task };
+}
+
+export async function recordTestnetPayment(
+  transactionId: string,
+  txHash: string,
+  recipient: string,
+  amountNear: string,
+): Promise<{ transaction: Transaction; task: Task }> {
+  const { error: recordError } = await supabase.rpc('record_testnet_payment', {
+    p_transaction_id: transactionId,
+    p_tx_hash: txHash,
+    p_recipient: recipient,
+    p_amount_near: amountNear,
+  });
+  if (recordError) {
+    throw userFacingError(recordError, 'The testnet payment could not be recorded. Please try again.');
+  }
+  return readTransactionAndTask(transactionId);
+}
+
+export async function declinePayment(
+  transactionId: string,
+): Promise<{ transaction: Transaction; task: Task }> {
+  const { error: declineError } = await supabase.rpc('decline_payment', { p_transaction_id: transactionId });
+  if (declineError) {
+    throw userFacingError(declineError, 'The payment could not be updated. Please try again.');
+  }
+  return readTransactionAndTask(transactionId);
 }
 
 export async function updateSettings(patch: Partial<WorkspaceSettings>): Promise<WorkspaceSettings> {
