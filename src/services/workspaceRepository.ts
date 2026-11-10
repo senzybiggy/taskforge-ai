@@ -163,6 +163,8 @@ export async function recordTestnetPayment(
     p_amount_near: amountNear,
   });
   if (recordError) {
+    const current = await readTransactionAndTask(transactionId).catch(() => null);
+    if (current?.transaction.nearTxHash === txHash) return current;
     throw userFacingError(recordError, 'The testnet payment could not be recorded. Please try again.');
   }
   return readTransactionAndTask(transactionId);

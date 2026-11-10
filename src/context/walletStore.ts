@@ -8,7 +8,7 @@ export interface WalletContextValue {
   error: string | null;
   connect: () => void;
   disconnect: () => Promise<void>;
-  sendTestnetTransfer: (receiverId: string, amountNear: string) => Promise<string>;
+  sendTestnetTransfer: (receiverId: string) => Promise<string>;
 }
 
 export const WalletContext = createContext<WalletContextValue | null>(null);

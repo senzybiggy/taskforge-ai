@@ -83,42 +83,43 @@ export async function signOutOfNearWallet(selector: WalletSelector): Promise<voi
 }
 
 export const TEST_TRANSFER_NEAR = '0.001';
-const TESTNET_ACCOUNT_PATTERN = /^[a-z0-9._-]+\.testnet$/;
-const YOCTO_PER_MICRO_NEAR = BigInt(10) ** BigInt(18);
+const TEST_TRANSFER_YOCTO = BigInt(10) ** BigInt(21);
+const MAX_ACCOUNT_ID_LENGTH = 64;
+const TESTNET_ACCOUNT_PATTERN = /^[a-z0-9]+([-_.][a-z0-9]+)*\.testnet$/;
 
 export function nearTestnetTransactionUrl(txHash: string): string {
   return `https://testnet.nearblocks.io/txns/${encodeURIComponent(txHash)}`;
 }
 
 export function isTestnetAccountId(accountId: string): boolean {
-  return TESTNET_ACCOUNT_PATTERN.test(accountId);
+  return accountId.length <= MAX_ACCOUNT_ID_LENGTH && TESTNET_ACCOUNT_PATTERN.test(accountId);
 }
 
 export async function sendTestnetTransfer(
   selector: WalletSelector,
+  signerId: string,
   receiverId: string,
-  amountInNear: string,
 ): Promise<string> {
-  if (selector.options.network.networkId !== 'testnet') {
+  if (selector.options.network.networkId !== NEAR_NETWORK_ID) {
     throw new Error('This transaction is only allowed on NEAR Testnet.');
   }
-
+  if (!isTestnetAccountId(signerId)) {
+    throw new Error('The connected wallet account is not a NEAR testnet account.');
+  }
   if (!isTestnetAccountId(receiverId)) {
     throw new Error('Enter a NEAR testnet account, such as name.testnet.');
   }
 
-  const amount = Number(amountInNear);
-
-  if (!Number.isFinite(amount) || amount <= 0 || amount > Number(TEST_TRANSFER_NEAR)) {
-    throw new Error('Test transfer must be greater than zero and no more than 0.001 NEAR.');
+  const wallet = await selector.wallet();
+  const accounts = await wallet.getAccounts();
+  if (!accounts.some((account) => account.accountId === signerId)) {
+    throw new Error('The connected wallet account changed. Reconnect your NEAR testnet wallet and try again.');
   }
 
-  const microNear = BigInt(Math.round(amount * 1e6));
-  const wallet = await selector.wallet();
-
   const outcome = await wallet.signAndSendTransaction({
+    signerId,
     receiverId,
-    actions: [actionCreators.transfer(microNear * YOCTO_PER_MICRO_NEAR)],
+    actions: [actionCreators.transfer(TEST_TRANSFER_YOCTO)],
   });
 
   if (!outcome) {

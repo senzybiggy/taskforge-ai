@@ -66,9 +66,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [connection]);
 
   const sendTestnetTransfer = useCallback(
-    async (receiverId: string, amountNear: string) => {
+    async (receiverId: string) => {
       if (!connection || !accountId) throw new Error('Connect your NEAR testnet wallet before sending a payment.');
-      return sendTransferFromSelector(connection.selector, receiverId, amountNear);
+      return sendTransferFromSelector(connection.selector, accountId, receiverId);
     },
     [connection, accountId],
   );

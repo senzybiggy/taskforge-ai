@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AlertTriangle, BadgeCheck, ExternalLink, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -10,8 +10,30 @@ import type { Transaction } from '@/types/domain';
 
 type Phase = 'idle' | 'sending' | 'recording' | 'recorded' | 'record_failed';
 
+interface PendingTransfer {
+  txHash: string;
+  recipient: string;
+}
+
 const TRANSFER_FAILED = 'The transfer was not approved in your wallet or did not complete. No payment was recorded.';
 const RECORD_FAILED = 'The NEAR testnet transfer went through, but saving the payment failed. Retry saving without sending again.';
+const INVALID_RECIPIENT = 'Enter a NEAR testnet account, such as name.testnet.';
+
+const pendingKey = (transactionId: string) => `taskforge.testnetTransfer.${transactionId}`;
+
+function readPendingTransfer(transactionId: string): PendingTransfer | null {
+  const raw = localStorage.getItem(pendingKey(transactionId));
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<PendingTransfer>;
+    if (typeof value.txHash === 'string' && typeof value.recipient === 'string') {
+      return { txHash: value.txHash, recipient: value.recipient };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 interface TestnetApprovalModalProps {
   transaction: Transaction;
@@ -22,15 +44,19 @@ interface TestnetApprovalModalProps {
 export function TestnetApprovalModal({ transaction, taskTitle, onClose }: TestnetApprovalModalProps) {
   const { status, accountId, connect, sendTestnetTransfer } = useWallet();
   const { recordTestnetApproval } = useAppData();
-  const [recipient, setRecipient] = useState('');
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [pending] = useState(() => readPendingTransfer(transaction.id));
+  const [recipient, setRecipient] = useState(pending?.recipient ?? '');
+  const [phase, setPhase] = useState<Phase>(pending ? 'record_failed' : 'idle');
+  const [txHash, setTxHash] = useState<string | null>(pending?.txHash ?? null);
+  const [error, setError] = useState<string | null>(pending ? RECORD_FAILED : null);
+  const sendInFlight = useRef(false);
 
   const busy = phase === 'sending' || phase === 'recording';
   const connected = status === 'ready' && accountId !== null;
   const trimmedRecipient = recipient.trim();
-  const canApprove = connected && trimmedRecipient.length > 0 && phase === 'idle';
+  const recipientValid = isTestnetAccountId(trimmedRecipient);
+  const recipientInvalid = trimmedRecipient.length > 0 && !recipientValid;
+  const canApprove = connected && recipientValid && phase === 'idle';
 
   const close = () => {
     if (!busy) onClose();
@@ -41,6 +67,7 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
     setError(null);
     try {
       await recordTestnetApproval(transaction, hash, to);
+      localStorage.removeItem(pendingKey(transaction.id));
       setPhase('recorded');
     } catch {
       setPhase('record_failed');
@@ -49,24 +76,30 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
   };
 
   const approve = async () => {
+    if (sendInFlight.current) return;
     if (!connected) {
       setError('Connect your NEAR testnet wallet first.');
       return;
     }
-    if (!isTestnetAccountId(trimmedRecipient)) {
-      setError('Enter a NEAR testnet account, such as name.testnet.');
+    if (!recipientValid) {
+      setError(INVALID_RECIPIENT);
       return;
     }
+    sendInFlight.current = true;
     setPhase('sending');
     setError(null);
     let hash: string;
     try {
-      hash = await sendTestnetTransfer(trimmedRecipient, TEST_TRANSFER_NEAR);
+      hash = await sendTestnetTransfer(trimmedRecipient);
     } catch {
+      sendInFlight.current = false;
       setPhase('idle');
       setError(TRANSFER_FAILED);
       return;
     }
+    sendInFlight.current = false;
+    const pendingTransfer: PendingTransfer = { txHash: hash, recipient: trimmedRecipient };
+    localStorage.setItem(pendingKey(transaction.id), JSON.stringify(pendingTransfer));
     setTxHash(hash);
     await record(hash, trimmedRecipient);
   };
@@ -82,7 +115,7 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
           <Button variant="ghost" onClick={close}>
             Close
           </Button>
-          <Button variant="success" onClick={() => record(txHash, trimmedRecipient)}>
+          <Button variant="success" onClick={() => record(txHash, trimmedRecipient)} loading={busy}>
             Retry saving
           </Button>
         </>
@@ -149,8 +182,10 @@ export function TestnetApprovalModal({ transaction, taskTitle, onClose }: Testne
               placeholder="name.testnet"
               autoComplete="off"
               spellCheck={false}
+              aria-invalid={recipientInvalid}
               className="rounded-xl border border-white/10 bg-ink-900 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-blue-400/60 focus:outline-none focus:ring-2 focus:ring-blue-400/30 disabled:opacity-50"
             />
+            {recipientInvalid && <span className="text-xs text-rose-300">{INVALID_RECIPIENT}</span>}
           </label>
         </div>
 

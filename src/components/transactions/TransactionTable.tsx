@@ -1,9 +1,10 @@
-import { ArrowUpRight, Check, ReceiptText, X } from 'lucide-react';
+import { ArrowUpRight, Check, ExternalLink, ReceiptText, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Panel';
 import { formatDate, formatUsdPrecise } from '@/lib/format';
 import { transactionStatus } from '@/lib/labels';
+import { nearTestnetTransactionUrl } from '@/services/nearWallet';
 import type { Agent, Task, Transaction } from '@/types/domain';
 
 export interface TransactionRow {
@@ -46,8 +47,20 @@ export function TransactionTable({ rows, busyId, onApprove, onDecline, onOpenTas
               <p className="truncate text-sm text-slate-300">{agent?.name ?? 'Unknown agent'}</p>
               <p className="text-sm text-slate-400">{formatDate(transaction.createdAt)}</p>
               <p className="text-sm font-semibold text-white lg:text-right">{formatUsdPrecise(transaction.amountUsd)}</p>
-              <div>
+              <div className="flex flex-col items-start gap-2">
                 <Badge tone={status.tone} dot>{status.label}</Badge>
+                {transaction.nearTxHash && (
+                  <a
+                    href={nearTestnetTransactionUrl(transaction.nearTxHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={transaction.nearTxHash}
+                    className="inline-flex items-center gap-1 font-mono text-xs text-blue-300 transition hover:text-blue-200"
+                  >
+                    {transaction.nearTxHash.slice(0, 8)}...{transaction.nearTxHash.slice(-6)}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </div>
               <div className="flex gap-2 lg:w-[200px] lg:justify-end">
                 {pending ? (
