@@ -26,7 +26,7 @@ function stepDetail(step: number, task: Task, agents: Agent[]): string | null {
     case 7:
       return task.verificationScore !== null ? `Verification score ${task.verificationScore}/100` : null;
     case 8:
-      return task.completedSteps >= FINAL_STEP ? `${formatUsd(task.bids.find((bid) => bid.agentId === task.selectedAgentId)?.amountUsd ?? 0)} simulated payment recorded` : null;
+      return task.completedSteps >= FINAL_STEP ? `${formatUsd(task.bids.find((bid) => bid.agentId === task.selectedAgentId)?.amountUsd ?? 0)} payment recorded` : null;
     default:
       return null;
   }

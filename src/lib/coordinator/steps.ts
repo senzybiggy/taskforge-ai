@@ -12,7 +12,7 @@ export const COORDINATOR_STEPS: readonly CoordinatorStep[] = [
   { id: 5, label: 'Agent hired', description: 'You hired the selected agent for this job.' },
   { id: 6, label: 'Work in progress', description: 'Start the work to receive the agent’s simulated deliverable.' },
   { id: 7, label: 'Work verified', description: 'Deliverables are checked against the brief.' },
-  { id: 8, label: 'Simulated payment approved', description: 'You approve the simulated payment. Spend never exceeds budget.' },
+  { id: 8, label: 'Payment approved', description: 'You approve the payment. Spend never exceeds budget.' },
 ];
 
 export const FINAL_STEP = COORDINATOR_STEPS.length;

@@ -30,7 +30,7 @@ export function nextStepFor(task: Task): string {
   if (task.completedSteps === 6) {
     if (!task.deliverable) return 'Start the work to generate the agent’s simulated deliverable.';
     if (!task.deliverable.reviewedAt) return 'Review the simulated deliverable, then mark it reviewed.';
-    return 'Verify the work to unlock the simulated payment.';
+    return 'Verify the work to unlock the payment.';
   }
   return 'The coordinator is analyzing your brief and gathering bids.';
 }

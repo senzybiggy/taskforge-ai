@@ -45,7 +45,7 @@ export function CoordinatorPanel({
 
   if (finished) {
     title = 'Task complete';
-    body = 'The simulated work was verified and the simulated payment was approved within budget.';
+    body = 'The work was verified and the payment was approved within budget.';
   } else if (running) {
     title = 'Coordinator is working';
     body = 'Analyzing, matching and checking progress automatically. You can leave this page open.';
@@ -84,7 +84,7 @@ export function CoordinatorPanel({
       );
     } else {
       title = 'Ready to verify';
-      body = 'You reviewed the simulated deliverable. Verify the work to unlock the simulated payment.';
+      body = 'You reviewed the simulated deliverable. Verify the work to unlock the payment.';
       action = (
         <Button onClick={onVerifyWork} loading={working} icon={<ShieldCheck className="h-4 w-4" />}>
           Work verified
@@ -94,7 +94,7 @@ export function CoordinatorPanel({
   } else if (step === 7) {
     title = verified ? 'Work verified' : 'Verification needs review';
     body = verified
-      ? 'The simulated work passed verification against your brief. Approve the simulated payment to close the task.'
+      ? 'The simulated work passed verification against your brief. Approve the payment to close the task.'
       : 'The deliverable did not pass verification. Review the work before any payment is requested.';
   } else if (step === 1 || step === 2 || step === 3) {
     title = step === 1 ? 'Task received' : 'Coordinator paused';
@@ -139,7 +139,7 @@ export function CoordinatorPanel({
       {finished && (
         <div className="relative mt-5 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3 text-sm text-emerald-200">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          Simulated work completed and simulated payment recorded within the approved budget.
+          Simulated work completed and payment recorded within the approved budget.
         </div>
       )}
 
