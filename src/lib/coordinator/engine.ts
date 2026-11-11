@@ -42,10 +42,10 @@ export const SCORE_WEIGHTS = {
 
 export function discoverBids(task: Task, agents: Agent[]): Bid[] {
   return agents
-    .filter((agent) => agent.isOnline && agent.category === task.specialization)
+    .filter((agent) => agent.isOnline)
     .flatMap((agent) => {
       const matchedSkills = task.skills.filter((skill) => agent.skills.includes(skill));
-      if (task.skills.length > 0 && matchedSkills.length === 0) return [];
+    
       const variance = unitHash(`${agent.id}:${task.id}`);
       const rawAmount = agent.basePriceUsd * (0.88 + variance * 0.26);
       const amountUsd = Math.round(rawAmount / 10) * 10;
