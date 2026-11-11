@@ -49,6 +49,9 @@ export function TransactionTable({ rows, busyId, onApprove, onDecline, onOpenTas
               <p className="text-sm font-semibold text-white lg:text-right">{formatUsdPrecise(transaction.amountUsd)}</p>
               <div className="flex flex-col items-start gap-2">
                 <Badge tone={status.tone} dot>{status.label}</Badge>
+                {transaction.status === 'approved' && !transaction.nearTxHash && (
+                  <span className="text-xs text-slate-500">Simulated, not on chain</span>
+                )}
                 {transaction.nearTxHash && (
                   <a
                     href={nearTestnetTransactionUrl(transaction.nearTxHash)}

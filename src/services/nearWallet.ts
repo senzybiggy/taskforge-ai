@@ -86,6 +86,11 @@ export const TEST_TRANSFER_NEAR = '0.001';
 const TEST_TRANSFER_YOCTO = BigInt(10) ** BigInt(21);
 const MAX_ACCOUNT_ID_LENGTH = 64;
 const TESTNET_ACCOUNT_PATTERN = /^[a-z0-9]+([-_.][a-z0-9]+)*\.testnet$/;
+const NEAR_TESTNET_RPC_URL = 'https://rpc.testnet.near.org';
+const CONFIRMATION_POLL_MS = 2_000;
+const CONFIRMATION_TIMEOUT_MS = 60_000;
+
+export type TestnetTransferStatus = 'success' | 'failed' | 'pending';
 
 export function nearTestnetTransactionUrl(txHash: string): string {
   return `https://testnet.nearblocks.io/txns/${encodeURIComponent(txHash)}`;
@@ -122,15 +127,35 @@ export async function sendTestnetTransfer(
     actions: [actionCreators.transfer(TEST_TRANSFER_YOCTO)],
   });
 
-  if (!outcome) {
-    throw new Error('The wallet did not return a result, so the payment was not recorded.');
+  const hash = outcome?.transaction?.hash;
+  if (!hash) {
+    throw new Error('The wallet did not return a transaction hash. Check your wallet activity before trying again.');
   }
-  const { status, transaction } = outcome;
-  if (typeof status !== 'object' || !('SuccessValue' in status)) {
-    throw new Error('The testnet transfer did not succeed, so the payment was not recorded.');
-  }
-  if (!transaction?.hash) {
-    throw new Error('The wallet did not return a transaction hash, so the payment was not recorded.');
-  }
-  return transaction.hash;
+  return hash;
 }
+
+async function readTestnetTransferStatus(txHash: string, signerId: string): Promise<TestnetTransferStatus> {
+  const response = await fetch(NEAR_TESTNET_RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 'taskforge', method: 'tx', params: [txHash, signerId] }),
+  });
+  if (!response.ok) return 'pending';
+  const body = (await response.json()) as { result?: { status?: unknown }; error?: unknown };
+  if (body.error || !body.result) return 'pending';
+  const status = body.result.status;
+  if (typeof status !== 'object' || status === null) return 'pending';
+  if ('Failure' in status) return 'failed';
+  if ('SuccessValue' in status) return 'success';
+  return 'pending';
+}
+
+export async function waitForTestnetTransfer(txHash: string, signerId: string): Promise<TestnetTransferStatus> {
+  const deadline = Date.now() + CONFIRMATION_TIMEOUT_MS;
+  for (;;) {
+    const status = await readTestnetTransferStatus(txHash, signerId).catch((): TestnetTransferStatus => 'pending');
+    if (status !== 'pending' || Date.now() >= deadline) return status;
+    await new Promise((resolve) => setTimeout(resolve, CONFIRMATION_POLL_MS));
+  }
+}
+
